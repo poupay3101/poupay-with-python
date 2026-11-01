@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PouPay — Finanças</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0F172A; --surface: #1E293B; --surface-2: #334155; --surface-3: #475569;
+    --text: #F8FAFC; --text-muted: #94A3B8; --brand: #38BDF8; --brand-soft: rgba(56, 189, 248, 0.15);
+    --income: #34D399; --income-soft: rgba(52, 211, 153, 0.15); --expense: #FB7185; --expense-soft: rgba(251, 113, 133, 0.15);
+    --line: rgba(248, 250, 252, 0.1); --radius-lg: 24px; --radius-md: 16px; --radius-sm: 10px; color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #F8FAFC; --surface: #FFFFFF; --surface-2: #F1F5F9; --surface-3: #E2E8F0;
+    --text: #0F172A; --text-muted: #64748B; --brand: #0284C7; --brand-soft: rgba(2, 132, 199, 0.15);
+    --income: #059669; --income-soft: rgba(5, 150, 105, 0.15); --expense: #E11D48; --expense-soft: rgba(225, 29, 72, 0.15);
+    --line: rgba(15, 23, 42, 0.1); color-scheme: light;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); padding-bottom: 90px; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  .header { padding: 24px 20px; display: flex; justify-content: space-between; align-items: center; max-width: 640px; margin: 0 auto; }
+  .brand-logo { font-weight: 700; font-size: 20px; display: flex; align-items: center; gap: 8px; }
+  .theme-toggle { background: var(--surface-2); border: none; color: var(--text); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; }
+  .container { max-width: 640px; margin: 0 auto; padding: 0 20px; }
+  .view { display: none; } .view.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+  .hero { text-align: center; padding: 10px 0 20px; } .hero-label { font-size: 14px; color: var(--text-muted); margin-bottom: 8px; }
+  .hero-amount { font-size: 44px; font-weight: 700; letter-spacing: -1px; }
+  .hero-row { display: flex; gap: 12px; margin-top: 20px; text-align: left; }
+  .pill-stat { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 14px; }
+  .pill-stat .k { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 500; }
+  .pill-stat .v { font-size: 18px; font-weight: 700; } .pill-stat.income .v { color: var(--income); } .pill-stat.expense .v { color: var(--expense); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+  .block-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-muted); } .muted { color: var(--text-muted); }
+  
+  .donut-wrap { display: flex; align-items: center; gap: 20px; }
+  .donut { width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center; }
+  .donut::after { content: ''; position: absolute; inset: 20px; border-radius: 50%; background: var(--surface); }
+  .donut-center { position: relative; z-index: 1; text-align: center; } .donut-center .n { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+  .legend { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; } .legend-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; } .legend-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;}
+  .legend-pct { color: var(--text-muted); font-size: 12px; font-weight: 600; } .empty-note { color: var(--text-muted); font-size: 14px; text-align: center; padding: 10px 0; }
+  .trend-chart { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; height: 130px; }
+  .trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 8px; }
+  .trend-bars { display: flex; align-items: flex-end; gap: 4px; height: 100%; } .trend-bar { width: 10px; border-radius: 4px 4px 2px 2px; min-height: 4px; }
+  .trend-bar.in { background: var(--income); } .trend-bar.out { background: var(--expense); }
+  .trend-label { font-size: 11px; color: var(--text-muted); font-weight: 500; } .trend-legend { display: flex; gap: 16px; margin-top: 16px; font-size: 13px; color: var(--text-muted); font-weight: 500;}
+  .trend-legend span { display: inline-flex; align-items: center; gap: 6px; } .dot-sm { width: 8px; height: 8px; border-radius: 50%; }
+  .catbar-row { margin-bottom: 14px; } .catbar-row:last-child { margin-bottom: 0; }
+  .catbar-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; font-weight: 500; }
+  .catbar-track { height: 8px; background: var(--surface-2); border-radius: 5px; overflow: hidden; } .catbar-fill { height: 100%; border-radius: 5px; background: var(--expense); }
+  
+  .tx-form { display: flex; flex-direction: column; gap: 16px; }
+  .seg { display: flex; background: var(--surface-2); border-radius: 999px; padding: 4px; }
+  .seg button { flex: 1; border: none; background: none; padding: 10px; border-radius: 999px; color: var(--text-muted); font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.2s; }
+  .seg button.active.receita { background: var(--income); color: #fff; } .seg button.active.despesa { background: var(--expense); color: #fff; }
+  .field label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
+  .field input, .field select { width: 100%; background: var(--surface-2); border: 1px solid var(--line); color: var(--text); border-radius: var(--radius-sm); padding: 14px; font-size: 15px; }
+  .field-row { display: flex; gap: 12px; } .field-row .field { flex: 1; }
+  .btn-primary { background: var(--brand); color: #fff; border: none; border-radius: var(--radius-sm); padding: 16px; font-weight: 600; font-size: 16px; cursor: pointer; margin-top: 8px; transition: opacity 0.2s; }
+  .btn-primary:active { opacity: 0.8; } .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  
+  .filter-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px; } .filter-row::-webkit-scrollbar { display: none; }
+  .chip { flex-shrink: 0; background: var(--surface); border: 1px solid var(--line); color: var(--text-muted); padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .chip.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .tx-item { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line); } .tx-item:last-child { border-bottom: none; }
+  .tx-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .tx-icon.receita { background: var(--income-soft); } .tx-icon.despesa { background: var(--expense-soft); }
+  .tx-mid { flex: 1; } .tx-desc { font-size: 15px; font-weight: 600; } .tx-meta { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+  .tx-amount { font-weight: 700; font-size: 15px; } .tx-amount.receita { color: var(--income); } .tx-amount.despesa { color: var(--expense); }
+  .tx-del { background: none; border: none; color: var(--expense); font-size: 18px; cursor: pointer; padding: 8px; opacity: 0.7; }
+  
+  .news-card { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); text-decoration: none; color: inherit; } .news-card:last-child { border-bottom: none; }
+  .news-ic { width: 44px; height: 44px; border-radius: 12px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .news-name { font-size: 15px; font-weight: 600; } .news-desc { font-size: 13px; color: var(--text-muted); margin-top: 4px; } .news-go { margin-left: auto; color: var(--text-muted); }
+  .glossary-item { border-bottom: 1px solid var(--line); } .glossary-item:last-child { border-bottom: none; }
+  .glossary-q { width: 100%; text-align: left; background: none; border: none; color: var(--text); padding: 16px 0; display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .glossary-q .car { transition: transform 0.2s ease; font-size: 12px; } .glossary-item.open .glossary-q .car { transform: rotate(180deg); }
+  .glossary-a { display: none; padding-bottom: 16px; font-size: 13.5px; color: var(--text-muted); line-height: 1.5; } .glossary-item.open .glossary-a { display: block; }
+  .disclaimer { font-size: 12px; color: var(--text-muted); margin-top: 16px; line-height: 1.5; }
+
+  .quick-sub { font-size: 13px; color: var(--text-muted); margin: -8px 0 16px; line-height: 1.5; }
+  .quick-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .quick-card {
+    display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; cursor: pointer;
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-md);
+    padding: 14px; color: var(--text); font-family: inherit; transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  .quick-card:hover { border-color: var(--brand); background: var(--brand-soft); }
+  .quick-card:active { transform: scale(0.98); }
+  .quick-card:disabled { opacity: 0.6; cursor: not-allowed; }
+  .quick-ic { width: 44px; height: 44px; border-radius: 12px; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .quick-body { flex: 1; min-width: 0; }
+  .quick-title { font-size: 15px; font-weight: 600; }
+  .quick-desc { font-size: 13px; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
+  .quick-go { color: var(--brand); font-size: 18px; flex-shrink: 0; }
+  
+  .tabbar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--line); display: none; padding-bottom: env(safe-area-inset-bottom); z-index: 50; }
+  .tabbar-inner { max-width: 640px; margin: 0 auto; display: flex; width: 100%; }
+  .tab-btn { flex: 1; background: none; border: none; padding: 16px 0; color: var(--text-muted); font-size: 12px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+  .tab-btn .ic { font-size: 22px; } .tab-btn.active { color: var(--brand); }
+  
+  .bernard-btn {
+    position: fixed; bottom: 90px; right: 20px; width: 60px; height: 60px; background: var(--brand); border-radius: 50%; display: none;
+    align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 8px 24px rgba(56, 189, 248, 0.4);
+    cursor: grab; z-index: 100; user-select: none; touch-action: none; border: 3px solid var(--surface);
+  }
+  .bernard-btn:active { cursor: grabbing; transform: scale(0.95); }
+
+  .bernard-chat {
+    position: fixed; width: 350px; max-width: calc(100vw - 20px); height: 480px; max-height: calc(100vh - 110px);
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    display: flex; flex-direction: column; z-index: 200; opacity: 0; pointer-events: none;
+    transform: scale(0.95); transition: opacity 0.2s, transform 0.2s;
+  }
+  .bernard-chat.open { opacity: 1; pointer-events: auto; transform: scale(1); }
+  .chat-header { padding: 16px 20px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; background: var(--surface-2); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .chat-title { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .close-chat { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 4px; line-height: 1; }
+  .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .msg { padding: 12px 16px; border-radius: 16px; font-size: 14px; max-width: 85%; line-height: 1.4; word-wrap: break-word; }
+  .msg.bernard { background: var(--surface-2); align-self: flex-start; border-bottom-left-radius: 4px; }
+  .msg.user { background: var(--brand); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .chat-input-area { padding: 16px; border-top: 1px solid var(--line); display: flex; gap: 8px; }
+  .chat-input-area input { flex: 1; background: var(--surface-2); border: 1px solid var(--line); color: var(--text); padding: 12px 16px; border-radius: 999px; font-size: 14px; outline: none; }
+  .chat-input-area input:focus { border-color: var(--brand); }
+  .chat-input-area button { background: var(--brand); color: #fff; border: none; padding: 0 20px; border-radius: 999px; font-weight: 600; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand-logo">🐷 PouPay</div>
+  <div style="display: flex; gap: 12px; align-items: center;">
+    <button id="btnDeleteAccount" style="display:none; background:none; border:none; color:#FB7185; font-weight:600; cursor:pointer;">Apagar Perfil</button>
+    <button id="btnLogout" style="display:none; background:none; border:none; color:var(--text-muted); font-weight:600; cursor:pointer;">Sair</button>
+    <button class="theme-toggle" id="themeToggle">🌗</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="view active" id="view-auth">
+    <div class="card" style="text-align: center; max-width: 400px; margin: 40px auto;">
+      <h2 style="margin-bottom: 24px;">Bem-vindo ao PouPay</h2>
+      <div id="authError" style="color: var(--expense); font-size: 13px; margin-bottom: 12px; display: none;"></div>
+      <div class="field" style="text-align: left; margin-bottom: 16px;"><label>E-mail</label><input type="email" id="authEmail" placeholder="seu@email.com"></div>
+      <div class="field" style="text-align: left; margin-bottom: 24px;"><label>Senha</label><input type="password" id="authPassword" placeholder="******"></div>
+      <button id="btnLogin" class="btn-primary" style="width: 100%; margin-bottom: 12px;">Entrar</button>
+      <button id="btnRegister" class="btn-primary" style="width: 100%; background: var(--surface-2); color: var(--text); margin-bottom: 24px;">Criar nova conta</button>
+      <div style="margin-bottom: 24px; color: var(--text-muted); font-size: 14px;">ou</div>
+      <button id="btnGoogle" class="btn-primary" style="width: 100%; background: #DB4437; color: white;">Entrar com Google</button>
+    </div>
+  </div>
+
+  <div class="view" id="view-overview">
+    <div class="hero">
+      <div class="hero-label">Saldo atual</div><div class="hero-amount" id="heroBalance">R$ 0,00</div>
+      <div class="hero-row">
+        <div class="pill-stat income"><div class="k">Entradas no mês</div><div class="v" id="statIncome">R$ 0,00</div></div>
+        <div class="pill-stat expense"><div class="k">Saídas no mês</div><div class="v" id="statExpense">R$ 0,00</div></div>
+      </div>
+    </div>
+    <div class="card"><div class="block-title">Para onde foi seu dinheiro (Este Mês)</div><div id="donutCard"></div></div>
+    <div class="card">
+      <div class="block-title">Últimos 6 meses</div><div class="trend-chart" id="trendChart"></div>
+      <div class="trend-legend"><span><i class="dot-sm" style="background:var(--income)"></i> Entradas</span><span><i class="dot-sm" style="background:var(--expense)"></i> Saídas</span></div>
+    </div>
+    <div class="card"><div class="block-title">Maiores categorias de gasto</div><div id="catBarsCard"></div></div>
+  </div>
+
+  <div class="view" id="view-entries">
+    <div class="card">
+      <form class="tx-form" id="txForm">
+        <div class="seg" id="typeSeg">
+          <button type="button" class="type-btn active receita" data-type="receita">Recebi</button>
+          <button type="button" class="type-btn despesa" data-type="despesa">Gastei</button>
+        </div>
+        <div class="field"><label>Descrição</label><input id="txDesc" type="text" placeholder="Ex: Salário, Supermercado..." required maxlength="60"></div>
+        <div class="field-row">
+          <div class="field"><label>Valor (R$)</label><input id="txAmount" type="number" step="0.01" min="0.01" required></div>
+          <div class="field"><label>Data</label><input id="txDate" type="date" required></div>
+        </div>
+        <div class="field"><label>Categoria</label><select id="txCategory"></select></div>
+        <button type="submit" class="btn-primary" id="submitBtn">Adicionar lançamento</button>
+      </form>
+    </div>
+    <div class="card" style="padding: 16px 20px;">
+      <div class="block-title" style="margin-bottom: 12px;">Histórico</div>
+      <div class="filter-row" id="filterRow"><button class="chip active" data-filter="todos">Todos</button><button class="chip" data-filter="receita">Entradas</button><button class="chip" data-filter="despesa">Saídas</button></div>
+      <div id="txList">Carregando...</div>
+    </div>
+  </div>
+
+  <div class="view" id="view-learn">
+    <div class="card">
+      <div class="block-title">🐷 Pergunte ao Bernard</div>
+      <div class="quick-sub">Toque em um tema e o Bernard responde na hora.</div>
+      <div class="quick-grid" id="quickCards"></div>
+    </div>
+    <div class="card">
+      <div class="block-title">Fontes para quem está começando</div>
+      <a class="news-card" href="https://g1.globo.com/economia/" target="_blank"><div class="news-ic">📰</div><div><div class="news-name">G1 Economia</div><div class="news-desc">Notícias diárias em linguagem acessível</div></div><div class="news-go">↗</div></a>
+      <a class="news-card" href="https://valorinveste.globo.com/" target="_blank"><div class="news-ic">📘</div><div><div class="news-name">Valor Investe</div><div class="news-desc">Educação financeira feita para não especialistas</div></div><div class="news-go">↗</div></a>
+      <a class="news-card" href="https://www.infomoney.com.br/guias/" target="_blank"><div class="news-ic">💡</div><div><div class="news-name">InfoMoney — Guias</div><div class="news-desc">Explicações passo a passo sobre investir e poupar</div></div><div class="news-go">↗</div></a>
+      <div class="disclaimer">Esses links abrem sites externos de terceiros. O PouPay não os controla nem se responsabiliza pelo conteúdo. Nada aqui é recomendação de investimento.</div>
+    </div>
+    <div class="card"><div class="block-title">Glossário rápido</div><div id="glossaryCard"></div></div>
+  </div>
+</div>
+
+<div class="tabbar" id="mainTabbar">
+  <div class="tabbar-inner">
+    <button class="tab-btn active" data-view="overview"><span class="ic">📊</span>Visão geral</button>
+    <button class="tab-btn" data-view="entries"><span class="ic">✍️</span>Lançamentos</button>
+    <button class="tab-btn" data-view="learn"><span class="ic">🎓</span>Aprender</button>
+  </div>
+</div>
+
+<div id="bernardBtn" class="bernard-btn" title="Falar com o Bernard">🐷</div>
+
+<div id="bernardChat" class="bernard-chat">
+  <div class="chat-header"><div class="chat-title">🐷 Bernard</div><button id="closeChatBtn" class="close-chat" title="Fechar">✕</button></div>
+  <div class="chat-messages" id="chatMessages"><div class="msg bernard">Oink! Olá, amigo! Sou o Bernard, o seu assistente financeiro do PouPay. Como posso ajudar com o seu dinheiro hoje? 💰</div></div>
+  <div class="chat-input-area"><input type="text" id="chatInput" placeholder="Escreva a sua mensagem..." autocomplete="off" /><button id="sendChatBtn">Enviar</button></div>
+</div>
+
+<script>
+  window.POUPAY_API_URL = "";
+</script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, deleteUser } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDI-h_6yVfrZVrLKlflARrsc_AiNzZbBH8",
+    authDomain: "poupay310114.firebaseapp.com",
+    projectId: "poupay310114",
+    storageBucket: "poupay310114.firebasestorage.app",
+    messagingSenderId: "762472327974",
+    appId: "1:762472327974:web:836f976266c70adec86fe7",
+    measurementId: "G-WKBN5TMJW0"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  const txCollection = collection(db, "transactions");
+  let currentUser = null;
+
+  function safeAddListener(id, event, handler) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener(event, handler);
+  }
+
+  const authEmail = document.getElementById('authEmail');
+  const authPassword = document.getElementById('authPassword');
+  const authError = document.getElementById('authError');
+  
+  function showAuthError(msg) { 
+      if(authError) { authError.textContent = msg; authError.style.display = 'block'; } 
+  }
+
+  safeAddListener('btnLogin', 'click', async () => {
+    const email = authEmail.value.trim();
+    const senha = authPassword.value;
+    if (!email || !senha) { showAuthError("Por favor, preencha o e-mail e a senha para entrar."); return; }
+    try { await signInWithEmailAndPassword(auth, email, senha); } 
+    catch (e) { showAuthError("Erro ao entrar: Verifique se o e-mail e a senha estão corretos."); }
+  });
+  
+  safeAddListener('btnRegister', 'click', async () => {
+    const email = authEmail.value.trim();
+    const senha = authPassword.value;
+    if (!email || !senha) { showAuthError("Por favor, preencha o e-mail e a senha para criar uma conta."); return; }
+    if (senha.length < 6) { showAuthError("A senha precisa ter pelo menos 6 caracteres."); return; }
+    try { 
+      await createUserWithEmailAndPassword(auth, email, senha); 
+      showAuthError("Conta criada com sucesso! Faça login acima.");
+    } 
+    catch (e) { showAuthError("Erro ao criar conta: O e-mail é inválido ou já está em uso."); }
+  });
+  
+  safeAddListener('btnGoogle', 'click', async () => {
+    try { 
+      const provider = new GoogleAuthProvider(); 
+      await signInWithPopup(auth, provider); 
+    } catch (e) {
+      showAuthError("O pop-up do Google está bloqueado. Use e-mail e senha!"); 
+    }
+  });
+  
+  safeAddListener('btnLogout', 'click', () => { signOut(auth); });
+
+  safeAddListener('btnDeleteAccount', 'click', async () => {
+    if (!currentUser) return;
+    try {
+      await deleteUser(currentUser);
+    } catch (e) {
+      if(e.code === 'auth/requires-recent-login') {
+        showAuthError("Por segurança, faça login novamente antes de apagar a conta.");
+      } else {
+        showAuthError("Erro ao apagar perfil: " + e.message);
+      }
+    }
+  });
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      currentUser = user;
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); 
+      const vo = document.getElementById('view-overview'); if (vo) vo.classList.add('active');
+      const tabbar = document.getElementById('mainTabbar'); if (tabbar) tabbar.style.display = 'flex'; 
+      const bBtn = document.getElementById('bernardBtn'); if (bBtn) bBtn.style.display = 'flex'; 
+      const bOut = document.getElementById('btnLogout'); if (bOut) bOut.style.display = 'block';
+      const bDel = document.getElementById('btnDeleteAccount'); if (bDel) bDel.style.display = 'block';
+      if(bBtn) { bBtn.style.left = 'auto'; bBtn.style.top = 'auto'; bBtn.style.right = '20px'; bBtn.style.bottom = '90px'; }
+      loadData();
+    } else {
+      currentUser = null;
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); 
+      const va = document.getElementById('view-auth'); if (va) va.classList.add('active');
+      const tabbar = document.getElementById('mainTabbar'); if (tabbar) tabbar.style.display = 'none'; 
+      const bBtn = document.getElementById('bernardBtn'); if (bBtn) bBtn.style.display = 'none'; 
+      const bOut = document.getElementById('btnLogout'); if (bOut) bOut.style.display = 'none';
+      const bDel = document.getElementById('btnDeleteAccount'); if (bDel) bDel.style.display = 'none';
+      state.transactions = []; 
+    }
+  });
+
+  const CATEGORIES = {
+    receita: [{ id: 'salario', label: 'Salário', icon: '💵' }, { id: 'freelance', label: 'Freelance', icon: '💻' }, { id: 'investimentos', label: 'Investimentos', icon: '🚀' }, { id: 'outros_receita', label: 'Outros', icon: '💡' }],
+    despesa: [{ id: 'moradia', label: 'Moradia', icon: '🏘️' }, { id: 'alimentacao', label: 'Alimentação', icon: '🛒' }, { id: 'transporte', label: 'Transporte', icon: '🚗' }, { id: 'saude', label: 'Saúde', icon: '🏥' }, { id: 'lazer', label: 'Lazer', icon: '🍿' }, { id: 'educacao', label: 'Educação', icon: '📚' }, { id: 'contas', label: 'Contas fixas', icon: '📄' }, { id: 'outros_despesa', label: 'Outros', icon: '📦' }]
+  };
+  const CAT_COLORS = ['#38BDF8', '#34D399', '#FB7185', '#A78BFA', '#FBBF24', '#F472B6', '#F97316', '#94A3B8'];
+  const GLOSSARY = [{ q: 'O que é reserva de emergência?', a: 'É um valor guardado à parte para cobrir imprevistos.' }, { q: 'O que é a taxa Selic?', a: 'É a taxa básica de juros da economia brasileira.' }];
+
+  const QUICK_PROMPTS = [
+    {
+      id: 'orcamento', icon: '🧾',
+      title: 'Criar meu primeiro orçamento',
+      desc: 'Passo a passo simples para quem não controla os gastos.',
+      prompt: 'Responda em formato de passos, exemplificando como criar um orçamento básico, no contexto de alguém que não tem controle de gastos, mantenha tom didático, gere um modelo simples e aja como consultor financeiro iniciante.'
+    },
+    {
+      id: 'reserva', icon: '🛟',
+      title: 'Reserva de emergência',
+      desc: 'Tabela comparando abordagens, valores e prazos.',
+      prompt: 'Crie uma tabela, comparando diferentes abordagens de reserva de emergência, para o contexto de um profissional que deseja estabilidade, use tom prático, apresente valores e prazos recomendados e fale como especialista em finanças pessoais.'
+    },
+    {
+      id: 'superfluas', icon: '✂️',
+      title: 'Cortar gastos supérfluos',
+      desc: 'Estratégias de economia para quem gasta muito com lazer.',
+      prompt: 'Liste em bullet points, mostrando exemplos de como reduzir despesas supérfluas, no contexto de alguém que gasta muito com lazer, mantenha tom equilibrado, gere estratégias de economia e posicione-se como coach de educação financeira.'
+    },
+    {
+      id: 'imovel', icon: '🏠',
+      title: 'Metas de longo prazo',
+      desc: 'Planejamento e cronograma para comprar um imóvel.',
+      prompt: 'Explique em texto corrido, trazendo exemplos de metas financeiras de longo prazo, no contexto de um profissional que sonha em comprar imóvel, mantenha tom planejador, ofereça um cronograma estimado e aja como conselheiro de finanças pessoais.'
+    },
+    {
+      id: 'apps', icon: '📱',
+      title: 'Apps de controle financeiro',
+      desc: 'Lista com prós e contras para registrar entradas e saídas.',
+      prompt: 'Crie uma lista enumerada, incluindo exemplos de aplicativos de registro financeiro, para o contexto de alguém que quer monitorar entradas e saídas, use tom organizador, forneça prós e contras de cada app e fale como um mentor de controle financeiro.'
+    }
+  ];
+
+  let state = { transactions: [], currentType: 'receita', filter: 'todos' };
+  
+  function fmtMoney(v) { return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+  function fmtDate(iso) { return iso.split('-').reverse().join('/'); }
+  function catMeta(tipo, id) { return CATEGORIES[tipo].find(c => c.id === id) || { label: id, icon: '📌' }; }
+  function monthKey(iso) { return iso.slice(0, 7); } function currentMonthKey() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+
+  async function loadData() {
+    if (!currentUser) return;
+    try {
+      const q = query(txCollection, where("userId", "==", currentUser.uid));
+      const snapshot = await getDocs(q);
+      let docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      docs.sort((a, b) => { if (b.data !== a.data) return b.data.localeCompare(a.data); return (b.criadoEm || 0) - (a.criadoEm || 0); });
+      state.transactions = docs; renderAll();
+    } catch (e) { 
+      const list = document.getElementById('txList'); 
+      if (list) list.innerHTML = '<p style="color:var(--expense)">Erro ao carregar os seus dados.</p>'; 
+    }
+  }
+
+  function renderOverview() {
+    let totalIncome = 0, totalExpense = 0, monthIncome = 0, monthExpense = 0; const mKey = currentMonthKey();
+    state.transactions.forEach(t => {
+      const v = Number(t.valor) || 0; if (t.tipo === 'receita') totalIncome += v; else totalExpense += v;
+      if (monthKey(t.data) === mKey) { if (t.tipo === 'receita') monthIncome += v; else monthExpense += v; }
+    });
+    const hBal = document.getElementById('heroBalance'); if(hBal) hBal.textContent = fmtMoney(totalIncome - totalExpense);
+    const sInc = document.getElementById('statIncome'); if(sInc) sInc.textContent = fmtMoney(monthIncome); 
+    const sExp = document.getElementById('statExpense'); if(sExp) sExp.textContent = fmtMoney(monthExpense);
+    renderDonut(mKey); renderTrend(); renderCatBars();
+  }
+  
+  function renderDonut(mKey) {
+    const card = document.getElementById('donutCard'); if (!card) return;
+    let byCat = {}, total = 0;
+    state.transactions.filter(t => t.tipo === 'despesa' && monthKey(t.data) === mKey).forEach(t => { const v = Number(t.valor) || 0; byCat[t.categoria] = (byCat[t.categoria] || 0) + v; total += v; });
+    if (total <= 0) { card.innerHTML = '<div class="empty-note">Adicione gastos neste mês para ver o gráfico.</div>'; return; }
+    const entries = Object.keys(byCat).map(id => ({ id, value: byCat[id], meta: catMeta('despesa', id) })).sort((a, b) => b.value - a.value);
+    let gradientParts = [], acc = 0;
+    entries.forEach((e, i) => { const color = CAT_COLORS[i % CAT_COLORS.length]; e.color = color; const start = (acc / total) * 360; acc += e.value; const end = (acc / total) * 360; gradientParts.push(`${color} ${start.toFixed(2)}deg ${end.toFixed(2)}deg`); });
+    card.innerHTML = `<div class="donut-wrap"><div class="donut" style="background: conic-gradient(${gradientParts.join(',')})"><div class="donut-center"><div class="n">Total</div></div></div><div class="legend">${entries.slice(0, 6).map(e => `<div class="legend-row"><span class="legend-dot" style="background:${e.color}"></span><span class="legend-name">${e.meta.icon} ${e.meta.label}</span><span class="legend-pct">${Math.round((e.value / total) * 100)}%</span></div>`).join('')}</div></div>`;
+  }
+  
+  function renderTrend() {
+    const el = document.getElementById('trendChart'); if (!el) return;
+    let months = []; const now = new Date();
+    for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push({ key: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'), label: d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '') }); }
+    let totals = {}; months.forEach(m => totals[m.key] = { in: 0, out: 0 });
+    state.transactions.forEach(t => { const k = monthKey(t.data); if (totals[k]) { if (t.tipo === 'receita') totals[k].in += Number(t.valor); else totals[k].out += Number(t.valor); } });
+    let maxVal = 1; months.forEach(m => maxVal = Math.max(maxVal, totals[m.key].in, totals[m.key].out));
+    el.innerHTML = months.map(m => `<div class="trend-col"><div class="trend-bars"><div class="trend-bar in" style="height:${Math.max(4, Math.round((totals[m.key].in / maxVal) * 110))}px"></div><div class="trend-bar out" style="height:${Math.max(4, Math.round((totals[m.key].out / maxVal) * 110))}px"></div></div><div class="trend-label">${m.label}</div></div>`).join('');
+  }
+  
+  function renderCatBars() {
+    const card = document.getElementById('catBarsCard'); if(!card) return;
+    let byCat = {}, total = 0;
+    state.transactions.filter(t => t.tipo === 'despesa').forEach(t => { const v = Number(t.valor) || 0; byCat[t.categoria] = (byCat[t.categoria] || 0) + v; total += v; });
+    if (total <= 0) { card.innerHTML = '<div class="empty-note">Suas categorias de gasto aparecerão aqui.</div>'; return; }
+    const entries = Object.keys(byCat).map(id => ({ id, value: byCat[id], meta: catMeta('despesa', id) })).sort((a, b) => b.value - a.value).slice(0, 5); const maxVal = entries[0].value;
+    card.innerHTML = entries.map(e => `<div class="catbar-row"><div class="catbar-top"><span>${e.meta.icon} ${e.meta.label}</span><span class="muted">${fmtMoney(e.value)}</span></div><div class="catbar-track"><div class="catbar-fill" style="width:${Math.max(4, Math.round((e.value / maxVal) * 100))}%"></div></div></div>`).join('');
+  }
+  
+  function renderTxList() {
+    const listEl = document.getElementById('txList'); if (!listEl) return;
+    let items = state.transactions;
+    if (state.filter !== 'todos') items = items.filter(t => t.tipo === state.filter);
+    if (items.length === 0) { listEl.innerHTML = '<p class="empty-note">Nenhum lançamento encontrado.</p>'; return; }
+    listEl.innerHTML = items.map(t => { const meta = catMeta(t.tipo, t.categoria); const sign = t.tipo === 'receita' ? '+' : '-'; return `<div class="tx-item"><div class="tx-icon ${t.tipo}">${meta.icon}</div><div class="tx-mid"><div class="tx-desc">${t.descricao}</div><div class="tx-meta">${meta.label} • ${fmtDate(t.data)}</div></div><div class="tx-amount ${t.tipo}">${sign} ${fmtMoney(t.valor)}</div><button class="tx-del" data-id="${t.id}">✕</button></div>`; }).join('');
+  }
+  
+  function renderGlossary() {
+    const card = document.getElementById('glossaryCard'); if (!card) return;
+    card.innerHTML = GLOSSARY.map(item => `<div class="glossary-item"><button class="glossary-q" type="button">${item.q} <span class="car">▼</span></button><div class="glossary-a">${item.a}</div></div>`).join('');
+    card.querySelectorAll('.glossary-q').forEach(btn => { btn.addEventListener('click', () => { btn.closest('.glossary-item').classList.toggle('open'); }); });
+  }
+
+  function renderQuickCards() {
+    const wrap = document.getElementById('quickCards'); if (!wrap) return;
+    wrap.innerHTML = QUICK_PROMPTS.map(p => `<button type="button" class="quick-card" data-quick="${p.id}"><div class="quick-ic">${p.icon}</div><div class="quick-body"><div class="quick-title">${p.title}</div><div class="quick-desc">${p.desc}</div></div><div class="quick-go">→</div></button>`).join('');
+  }
+  
+  function renderAll() { renderOverview(); renderTxList(); }
+
+  safeAddListener('txForm', 'submit', async (e) => {
+    e.preventDefault(); if (!currentUser) return;
+    const btn = document.getElementById('submitBtn'); btn.disabled = true; btn.textContent = 'Salvando...';
+    const newTx = { userId: currentUser.uid, tipo: state.currentType, descricao: document.getElementById('txDesc').value.trim(), valor: parseFloat(document.getElementById('txAmount').value), data: document.getElementById('txDate').value, categoria: document.getElementById('txCategory').value, criadoEm: Date.now() };
+    try { await addDoc(txCollection, newTx); document.getElementById('txForm').reset(); document.getElementById('txDate').value = new Date().toISOString().split('T')[0]; await loadData(); } catch (err) { console.error(err); } finally { btn.disabled = false; btn.textContent = 'Adicionar lançamento'; }
+  });
+  
+  safeAddListener('txList', 'click', async (e) => {
+    if (e.target.classList.contains('tx-del')) {
+      const id = e.target.getAttribute('data-id');
+      try {
+        await deleteDoc(doc(db, "transactions", id));
+        await loadData();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  });
+  
+  safeAddListener('filterRow', 'click', (e) => {
+    const chip = e.target.closest('.chip'); if (!chip) return;
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active')); chip.classList.add('active'); state.filter = chip.getAttribute('data-filter'); renderTxList();
+  });
+  
+  document.querySelectorAll('.type-btn').forEach(btn => {
+    btn.addEventListener('click', () => { document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); state.currentType = btn.getAttribute('data-type'); document.getElementById('txCategory').innerHTML = CATEGORIES[state.currentType].map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join(''); });
+  });
+  
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById('view-' + btn.getAttribute('data-view')).classList.add('active'); btn.classList.add('active'); window.scrollTo(0,0); });
+  });
+  
+  safeAddListener('themeToggle', 'click', () => { const root = document.documentElement; root.setAttribute('data-theme', root.getAttribute('data-theme') === 'light' ? 'dark' : 'light'); });
+
+  const bernardBtn = document.getElementById('bernardBtn');
+  const bernardChat = document.getElementById('bernardChat');
+  let isDragging = false, hasMoved = false, startX, startY, initialLeft, initialTop;
+
+  function clamp(val, min, max) { return Math.max(min, Math.min(val, max)); }
+
+  window.addEventListener('resize', () => {
+    if (!bernardBtn || bernardBtn.style.display === 'none' || bernardBtn.style.left === 'auto') return;
+    const maxL = window.innerWidth - bernardBtn.offsetWidth;
+    const maxT = window.innerHeight - bernardBtn.offsetHeight;
+    bernardBtn.style.left = `${clamp(bernardBtn.offsetLeft, 0, maxL)}px`;
+    bernardBtn.style.top = `${clamp(bernardBtn.offsetTop, 0, maxT)}px`;
+  });
+
+  function onDragStart(e) {
+    if(!bernardBtn) return;
+    const event = e.type === 'touchstart' ? e.touches[0] : e;
+    startX = event.clientX; startY = event.clientY;
+    const rect = bernardBtn.getBoundingClientRect();
+    initialLeft = rect.left; initialTop = rect.top;
+    isDragging = true; hasMoved = false;
+    document.addEventListener('mousemove', onDragMove); document.addEventListener('mouseup', onDragEnd);
+    document.addEventListener('touchmove', onDragMove, { passive: false }); document.addEventListener('touchend', onDragEnd);
+  }
+  
+  function onDragMove(e) {
+    if (!isDragging || !bernardBtn) return;
+    const event = e.type === 'touchmove' ? e.touches[0] : e;
+    const dx = event.clientX - startX; const dy = event.clientY - startY;
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) hasMoved = true;
+    if (hasMoved) {
+      e.preventDefault();
+      let newLeft = clamp(initialLeft + dx, 0, window.innerWidth - bernardBtn.offsetWidth);
+      let newTop = clamp(initialTop + dy, 0, window.innerHeight - bernardBtn.offsetHeight);
+      bernardBtn.style.right = 'auto'; bernardBtn.style.bottom = 'auto';
+      bernardBtn.style.left = `${newLeft}px`; bernardBtn.style.top = `${newTop}px`;
+    }
+  }
+  
+  function onDragEnd() {
+    isDragging = false;
+    document.removeEventListener('mousemove', onDragMove); document.removeEventListener('mouseup', onDragEnd);
+    document.removeEventListener('touchmove', onDragMove); document.removeEventListener('touchend', onDragEnd);
+  }
+
+  function openBernardChat(focusInput = true) {
+    if (!bernardChat || !bernardBtn) return;
+    bernardChat.style.display = 'flex'; 
+    const chatW = bernardChat.offsetWidth || 350;
+    const chatH = bernardChat.offsetHeight || 480;
+    const pigRect = bernardBtn.getBoundingClientRect();
+    let chatLeft = pigRect.left - (chatW / 2) + 30;
+    let chatTop = pigRect.top - chatH - 10;
+    if (chatTop < 10) chatTop = pigRect.bottom + 10;
+    chatLeft = clamp(chatLeft, 10, window.innerWidth - chatW - 10);
+    chatTop = clamp(chatTop, 10, window.innerHeight - chatH - 10);
+    bernardChat.style.left = `${chatLeft}px`; bernardChat.style.top = `${chatTop}px`;
+    bernardChat.classList.add('open'); 
+    if (focusInput) { const cIn = document.getElementById('chatInput'); if (cIn) cIn.focus(); }
+  }
+  
+  if (bernardBtn) {
+      bernardBtn.addEventListener('mousedown', onDragStart); 
+      bernardBtn.addEventListener('touchstart', onDragStart, { passive: true });
+      bernardBtn.addEventListener('click', (e) => {
+        if (hasMoved) { e.preventDefault(); return; }
+        openBernardChat();
+      });
+  }
+
+  const chatInput = document.getElementById('chatInput');
+  const chatMessages = document.getElementById('chatMessages');
+
+  safeAddListener('closeChatBtn', 'click', () => { 
+      if (!bernardChat) return;
+      bernardChat.classList.remove('open'); 
+      setTimeout(() => { bernardChat.style.display = ''; }, 300); 
+  });
+
+  const API_BASE_URL = String(window.POUPAY_API_URL || "").replace(/\/+$/, "");
+  let isSending = false;
+
+  async function sendChatMessage() {
+    if (!chatInput || !chatMessages || isSending) return;
+    const message = chatInput.value.trim();
+    if (!message) return;
+    isSending = true;
+
+    const displayText = chatInput.dataset.display || message;
+    delete chatInput.dataset.display;
+
+    const userMsg = document.createElement('div');
+    userMsg.className = 'msg user';
+    userMsg.textContent = displayText;
+    chatMessages.appendChild(userMsg);
+    chatInput.value = '';
+
+    const typing = document.createElement('div');
+    typing.className = 'msg bernard';
+    typing.textContent = 'Oink... a pensar... 🐷';
+    chatMessages.appendChild(typing);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60000);
+    try {
+      const response = await fetch(API_BASE_URL + '/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+        signal: controller.signal
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Erro ao falar com o servidor.');
+
+      typing.textContent = data.reply || 'Oink! Não consegui gerar uma resposta, amigo. 🐷';
+      typing.style.whiteSpace = 'pre-wrap';
+    } catch (error) {
+      console.error('Erro no chat do Bernard:', error);
+      let detail;
+      if (error && error.name === 'AbortError') {
+        detail = 'a resposta demorou demais. Tente novamente.';
+      } else if (error instanceof TypeError) {
+        detail = (location.protocol === 'file:' && !API_BASE_URL)
+          ? 'abra o app pelo endereço do servidor (ex.: http://localhost:3000) e não direto pelo arquivo.'
+          : 'não consegui alcançar o servidor do Bernard. Verifique se ele está online.';
+      } else {
+        detail = (error && error.message) ? error.message : 'erro desconhecido.';
+      }
+      typing.textContent = 'Oink! Não consegui responder: ' + detail + ' 🐷';
+      typing.style.color = 'var(--expense)';
+    } finally {
+      clearTimeout(timer);
+      isSending = false;
+    }
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+  
+  safeAddListener('sendChatBtn', 'click', sendChatMessage);
+  if (chatInput) {
+      chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendChatMessage(); });
+  }
+
+  function triggerQuickPrompt(id) {
+    const item = QUICK_PROMPTS.find(p => p.id === id);
+    const input = document.getElementById('chatInput');
+    if (!item || !input) return;
+    try { openBernardChat(false); } catch (err) {}
+    if (isSending) return;
+    input.value = item.prompt;
+    input.dataset.display = item.title;
+    const sendBtn = document.getElementById('sendChatBtn');
+    if (sendBtn) sendBtn.click();
+  }
+
+  document.addEventListener('click', (e) => {
+    const card = e.target.closest ? e.target.closest('.quick-card') : null;
+    if (!card) return;
+    e.preventDefault();
+    triggerQuickPrompt(card.getAttribute('data-quick'));
+  });
+
+  const tDate = document.getElementById('txDate');
+  if (tDate) tDate.value = new Date().toISOString().split('T')[0];
+  const tCat = document.querySelector('.type-btn.receita');
+  if (tCat) tCat.click();
+  
+  renderGlossary(); 
+  renderQuickCards();
+</script>
+</body>
+</html>
